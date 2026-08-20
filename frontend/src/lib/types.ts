@@ -1,0 +1,5 @@
+export type ColumnProfile={name:string;data_type:string;empty_count:number;empty_percentage:number;unique_count:number;sample_values:string[];semantic_meaning?:string;semantic_confidence:number}
+export type DatasetProfile={dataset_id:string;filename:string;total_records:number;total_columns:number;columns:ColumnProfile[];field_mapping:Record<string,string>}
+export type Condition={field:string;operator:string;value?:unknown;concept?:string}
+export type Rule={id:string;name:string;description:string;category:string;source_language:string;original_input:string;canonical_logic:{scope:Condition[];assertions:Condition[];group_by?:string};dataset_field_mapping:Record<string,string>;conditions:Condition[];expected_result:Record<string,unknown>;result_type:string;status:'draft'|'validated'|'rejected'|'executed';severity:string;enabled:boolean}
+export type RuleResult={rule_id:string;rule_name:string;result_type:string;total_scoped_records:number;compliant_count?:number;non_compliant_count?:number;compliance_rate?:number;count?:number;distribution?:Record<string,number>;records:Record<string,unknown>[];insight:string}
