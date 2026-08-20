@@ -1,0 +1,7 @@
+username,employeeID,manager,email,accountType,status,country,department,lastLogon,privilege
+jdupont,E001,msmith,jdupont@example.com,Human,Active,FR,IT,2026-07-01,User
+jsmith,,rjohnson,jsmith@example.com,Human,Active,UK,Finance,2026-07-12,User
+svc_backup,,ops,svc_backup@example.com,Service,Enabled,US,IT,2026-08-01,Admin
+adoe,E003,,adoe@example.com,Human,Active,US,HR,2026-08-15,User
+admin_old,E004,cio,admin@example.com,Human,Inactive,US,IT,2025-01-15,Admin
+bwayne,E005,alfred,adoe@example.com,Human,Active,US,Security,2026-08-19,Privileged

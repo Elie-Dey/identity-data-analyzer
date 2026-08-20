@@ -1,0 +1,6 @@
+import type {DatasetProfile,Rule,RuleResult} from './types';
+const API=import.meta.env.VITE_API_URL??'http://localhost:8000';
+export async function uploadDataset(file:File):Promise<DatasetProfile>{const body=new FormData();body.append('file',file);const r=await fetch(`${API}/datasets/upload`,{method:'POST',body});if(!r.ok)throw new Error(await r.text());return r.json()}
+export async function suggestRules(datasetId:string,field_mapping:Record<string,string>):Promise<Rule[]>{const r=await fetch(`${API}/datasets/${datasetId}/rules/suggest`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({field_mapping})});if(!r.ok)throw new Error(await r.text());return r.json()}
+export async function interpretRule(datasetId:string,field_mapping:Record<string,string>,text:string):Promise<Rule>{const r=await fetch(`${API}/datasets/${datasetId}/rules/interpret`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({field_mapping,text})});if(!r.ok)throw new Error(await r.text());return r.json()}
+export async function runAnalysis(datasetId:string,rules:Rule[]):Promise<RuleResult[]>{const r=await fetch(`${API}/datasets/${datasetId}/analysis/run`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rules})});if(!r.ok)throw new Error(await r.text());return r.json()}

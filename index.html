@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Identity Data Analyzer</title>
+    <meta
+      name="description"
+      content="Identity Data Analyzer transforme des exports IAM CSV/XLSX en règles canoniques validées par l'utilisateur et résultats exploitables."
+    />
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #eef4fb;
+        --panel: #ffffff;
+        --ink: #142033;
+        --muted: #64748b;
+        --primary: #155eef;
+        --primary-dark: #0f3e99;
+        --border: #d8e2ef;
+        --ok: #0f9f6e;
+        --warn: #d97706;
+        --danger: #dc2626;
+        --shadow: 0 18px 45px rgba(15, 35, 70, 0.12);
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at top left, rgba(37, 99, 235, 0.16), transparent 32rem),
+          linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+        color: var(--ink);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      header {
+        margin: 24px auto 18px;
+        max-width: 1280px;
+        padding: 34px;
+        border-radius: 30px;
+        background: linear-gradient(135deg, #10233f 0%, #155eef 58%, #38bdf8 100%);
+        color: white;
+        box-shadow: var(--shadow);
+      }
+
+      h1, h2, h3 { margin: 0; }
+      h1 { font-size: clamp(2rem, 5vw, 4.2rem); letter-spacing: -0.06em; }
+      h2 { font-size: 1.15rem; margin-bottom: 14px; }
+      h3 { font-size: 1rem; }
+      p { line-height: 1.6; }
+      header p { max-width: 820px; color: #dbeafe; font-size: 1.08rem; }
+
+      .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+      .button, button, label.upload {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 42px;
+        border: 0;
+        border-radius: 12px;
+        padding: 10px 15px;
+        background: var(--primary);
+        color: white;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      .button.secondary, button.secondary { background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.35); }
+      button:disabled { background: #94a3b8; cursor: not-allowed; }
+
+      main { max-width: 1280px; margin: 0 auto 36px; padding: 0 18px; }
+      .grid { display: grid; grid-template-columns: 1fr 1.35fr 1fr; gap: 16px; align-items: start; }
+      .panel {
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        padding: 18px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(12px);
+      }
+      .panel + .panel { margin-top: 16px; }
+      .metric-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .metric { border: 1px solid var(--border); border-radius: 16px; padding: 12px; background: #f8fbff; }
+      .metric strong { display: block; font-size: 1.6rem; color: var(--primary-dark); }
+      .field, .rule, .result, .message {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 12px;
+        margin: 10px 0;
+        background: #fbfdff;
+      }
+      .field { display: grid; gap: 5px; }
+      .field small, .muted { color: var(--muted); }
+      .tag { display: inline-flex; border-radius: 999px; padding: 3px 8px; font-size: 0.78rem; font-weight: 800; background: #e0ecff; color: #1546a0; }
+      .tag.ok { background: #dff8ee; color: #08734f; }
+      .tag.warn { background: #fff2d8; color: #9a5a00; }
+      .tag.danger { background: #fee2e2; color: #991b1b; }
+
+      textarea, select, input[type="text"] {
+        width: 100%;
+        border: 1px solid #cbd5e1;
+        border-radius: 12px;
+        padding: 10px;
+        font: inherit;
+        background: white;
+      }
+      textarea { min-height: 92px; resize: vertical; }
+      input[type="file"] { display: none; }
+      pre {
+        white-space: pre-wrap;
+        overflow: auto;
+        border-radius: 14px;
+        padding: 12px;
+        background: #0f172a;
+        color: #dbeafe;
+        font-size: 0.88rem;
+      }
+      table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.88rem; }
+      th, td { border-bottom: 1px solid var(--border); padding: 8px; text-align: left; }
+      th { color: var(--muted); }
+      .hidden { display: none; }
+
+      @media (max-width: 1050px) { .grid { grid-template-columns: 1fr; } header { margin-inline: 18px; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <span class="tag ok">MVP GitHub Pages — démo locale dans le navigateur</span>
+      <h1>Identity Data Analyzer</h1>
+      <p>
+        Analysez un export d'identités, mappez les champs IAM, validez des règles canoniques une par une,
+        puis exécutez une analyse déterministe sans envoyer vos données à un serveur.
+      </p>
+      <div class="hero-actions">
+        <label class="upload" for="datasetFile">Importer un CSV</label>
+        <a class="button secondary" href="samples/identity_users.csv" download>Télécharger le CSV d'exemple</a>
+        <a class="button secondary" href="docs/architecture.md">Voir l'architecture</a>
+      </div>
+    </header>
+
+    <main>
+      <input id="datasetFile" type="file" accept=".csv,text/csv" />
+      <section class="grid">
+        <aside>
+          <section class="panel">
+            <h2>1. Dataset</h2>
+            <p class="muted">Chargez un CSV IAM. La version GitHub Pages est statique et traite le fichier côté navigateur.</p>
+            <div class="metric-row">
+              <div class="metric"><span>Fichier</span><strong id="fileName">—</strong></div>
+              <div class="metric"><span>Lignes</span><strong id="rowCount">0</strong></div>
+              <div class="metric"><span>Colonnes</span><strong id="columnCount">0</strong></div>
+              <div class="metric"><span>Mapping</span><strong id="mappingCount">0</strong></div>
+            </div>
+            <div id="fields"></div>
+          </section>
+        </aside>
+
+        <section>
+          <section class="panel">
+            <h2>2. IAM Agent</h2>
+            <div id="agentMessage" class="message">
+              Importez un CSV pour générer un profil, identifier les concepts IAM et recevoir la première règle proposée.
+            </div>
+            <div id="proposal" class="hidden"></div>
+          </section>
+
+          <section class="panel">
+            <h2>Règle personnalisée multilingue</h2>
+            <p class="muted">Exemples : “Identify duplicate email addresses”, “Vérifie que les comptes svc_ sont Service”, “Liste les comptes actifs sans manager”.</p>
+            <textarea id="customRule" placeholder="Décrivez une règle IAM en français, anglais ou espagnol..."></textarea>
+            <button id="interpretButton" disabled>Interpréter la règle</button>
+          </section>
+        </section>
+
+        <aside>
+          <section class="panel">
+            <h2>3. Analysis Rules</h2>
+            <div id="rulesList" class="muted">Aucune règle validée pour le moment.</div>
+            <button id="runButton" disabled>RUN ANALYSIS</button>
+          </section>
+        </aside>
+      </section>
+
+      <section id="resultsPanel" class="panel hidden" style="margin-top: 16px;">
+        <h2>4. Results Dashboard</h2>
+        <div class="metric-row">
+          <div class="metric"><span>Règles exécutées</span><strong id="executedRules">0</strong></div>
+          <div class="metric"><span>Score global</span><strong id="overallScore">—</strong></div>
+        </div>
+        <div id="results"></div>
+      </section>
+    </main>
+
+    <script>
+      const concepts = [
+        'USERNAME', 'EMPLOYEE_ID', 'MANAGER', 'EMAIL', 'ACCOUNT_TYPE', 'ACCOUNT_STATUS',
+        'DEPARTMENT', 'COUNTRY', 'LAST_LOGIN', 'PRIVILEGE_LEVEL', 'OWNER', 'SOURCE_SYSTEM'
+      ];
+      const aliases = {
+        USERNAME: ['username', 'user', 'samaccountname', 'login', 'uid', 'accountname'],
+        EMPLOYEE_ID: ['employeeid', 'employee_id', 'employeenumber', 'matricule', 'personnelnumber', 'workerid'],
+        MANAGER: ['manager', 'managerid', 'supervisor', 'responsable'],
+        EMAIL: ['email', 'mail', 'userprincipalname', 'upn'],
+        ACCOUNT_TYPE: ['accounttype', 'type', 'classification', 'usertype'],
+        ACCOUNT_STATUS: ['status', 'enabled', 'active', 'accountstatus', 'state'],
+        DEPARTMENT: ['department', 'dept', 'division', 'service'],
+        COUNTRY: ['country', 'co', 'pays'],
+        LAST_LOGIN: ['lastlogon', 'lastlogin', 'lastsignindatetime'],
+        PRIVILEGE_LEVEL: ['privilege', 'privilegelevel', 'admin', 'isadmin'],
+        OWNER: ['owner', 'accountowner', 'responsible']
+      };
+      const state = { rows: [], columns: [], mapping: {}, queue: [], rules: [], results: [] };
+      const $ = (id) => document.getElementById(id);
+
+      function normalize(value) { return String(value).toLowerCase().replace(/[^a-z0-9]/g, ''); }
+      function inferConcept(column) {
+        const normalized = normalize(column);
+        for (const [concept, names] of Object.entries(aliases)) {
+          if (names.some((name) => normalize(name) === normalized)) return concept;
+        }
+        for (const [concept, names] of Object.entries(aliases)) {
+          if (names.some((name) => normalized.includes(normalize(name)) || normalize(name).includes(normalized))) return concept;
+        }
+        return '';
+      }
+      function splitCsvLine(line) {
+        const cells = []; let cell = ''; let quoted = false;
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i]; const next = line[i + 1];
+          if (char === '"' && quoted && next === '"') { cell += '"'; i++; }
+          else if (char === '"') quoted = !quoted;
+          else if (char === ',' && !quoted) { cells.push(cell); cell = ''; }
+          else cell += char;
+        }
+        cells.push(cell); return cells.map((value) => value.trim());
+      }
+      function parseCsv(text) {
+        const lines = text.split(/\r?\n/).filter((line) => line.trim().length);
+        const columns = splitCsvLine(lines.shift() || '');
+        const rows = lines.map((line) => Object.fromEntries(splitCsvLine(line).map((value, index) => [columns[index], value])));
+        return { columns, rows };
+      }
+      function profileColumn(column) {
+        const values = state.rows.map((row) => row[column] ?? '');
+        const empty = values.filter((value) => String(value).trim() === '').length;
+        return { empty, emptyPct: state.rows.length ? Math.round((empty / state.rows.length) * 1000) / 10 : 0, unique: new Set(values.filter(Boolean)).size };
+      }
+      function byConcept() { return Object.fromEntries(Object.entries(state.mapping).filter(([, concept]) => concept).map(([field, concept]) => [concept, field])); }
+      function suggestRules() {
+        const m = byConcept(); const rules = [];
+        if (m.ACCOUNT_TYPE && m.EMPLOYEE_ID) rules.push({ id: 'R001', name: 'Human accounts require Employee ID', status: 'draft', result_type: 'compliance_rate', logic: { scope: [{ field: m.ACCOUNT_TYPE, operator: 'equals', value: 'Human' }], assertions: [{ field: m.EMPLOYEE_ID, operator: 'is_not_empty' }] } });
+        if (m.ACCOUNT_STATUS && m.MANAGER) rules.push({ id: `R${String(rules.length + 1).padStart(3, '0')}`, name: 'Active accounts require Manager', status: 'draft', result_type: 'compliance_rate', logic: { scope: [{ field: m.ACCOUNT_STATUS, operator: 'in', value: ['Active', 'Enabled', 'True'] }], assertions: [{ field: m.MANAGER, operator: 'is_not_empty' }] } });
+        if (m.EMAIL) rules.push({ id: `R${String(rules.length + 1).padStart(3, '0')}`, name: 'Duplicate email detection', status: 'draft', result_type: 'duplicates', logic: { scope: [], assertions: [{ field: m.EMAIL, operator: 'is_duplicate' }] } });
+        if (m.ACCOUNT_TYPE) rules.push({ id: `R${String(rules.length + 1).padStart(3, '0')}`, name: 'Account distribution by type', status: 'draft', result_type: 'distribution', logic: { group_by: m.ACCOUNT_TYPE, scope: [], assertions: [] } });
+        state.queue = rules; renderProposal();
+      }
+      function logicText(rule) {
+        const lines = [];
+        (rule.logic.scope || []).forEach((c) => lines.push(`IF ${c.field} ${c.operator} ${Array.isArray(c.value) ? c.value.join(', ') : c.value ?? ''}`));
+        (rule.logic.assertions || []).forEach((c) => lines.push(`THEN ${c.field} ${c.operator} ${c.value ?? ''}`));
+        if (rule.logic.group_by) lines.push(`GROUP BY ${rule.logic.group_by}`);
+        return lines.join('\n');
+      }
+      function renderDataset(fileName) {
+        $('fileName').textContent = fileName || '—'; $('rowCount').textContent = state.rows.length; $('columnCount').textContent = state.columns.length;
+        $('mappingCount').textContent = Object.values(state.mapping).filter(Boolean).length;
+        $('fields').innerHTML = state.columns.map((column) => {
+          const p = profileColumn(column);
+          return `<div class="field"><strong>${column}</strong><select data-column="${column}"><option value="">Non mappé</option>${concepts.map((concept) => `<option value="${concept}" ${state.mapping[column] === concept ? 'selected' : ''}>${concept}</option>`).join('')}</select><small>${p.emptyPct}% vide · ${p.unique} valeurs uniques</small></div>`;
+        }).join('');
+        document.querySelectorAll('select[data-column]').forEach((select) => select.addEventListener('change', (event) => { state.mapping[event.target.dataset.column] = event.target.value; renderDataset(fileName); suggestRules(); }));
+      }
+      function renderProposal() {
+        const current = state.queue[0];
+        if (!current) { $('proposal').classList.add('hidden'); $('agentMessage').textContent = state.rows.length ? 'Plus aucune règle proposée. Ajoutez une règle personnalisée ou lancez l’analyse.' : 'Importez un CSV pour commencer.'; return; }
+        $('proposal').classList.remove('hidden'); $('agentMessage').textContent = 'J’ai détecté une règle IAM pertinente. Validez-la ou rejetez-la avant de passer à la suivante.';
+        $('proposal').innerHTML = `<article class="rule"><span class="tag warn">Proposition séquentielle</span><h3>${current.name}</h3><pre>${logicText(current)}</pre><button id="validateRule">Validate</button><button class="secondary" id="rejectRule">Reject</button></article>`;
+        $('validateRule').onclick = () => { current.status = 'validated'; state.rules.push(current); state.queue.shift(); renderRules(); renderProposal(); };
+        $('rejectRule').onclick = () => { state.queue.shift(); renderProposal(); };
+      }
+      function renderRules() {
+        $('rulesList').classList.toggle('muted', state.rules.length === 0);
+        $('rulesList').innerHTML = state.rules.length ? state.rules.map((rule) => `<div class="rule"><span class="tag ok">✓ ${rule.id}</span><h3>${rule.name}</h3><pre>${logicText(rule)}</pre></div>`).join('') : 'Aucune règle validée pour le moment.';
+        $('runButton').disabled = !state.rules.length;
+      }
+      function match(row, cond) {
+        const value = row[cond.field] ?? ''; const text = String(value).toLowerCase();
+        if (cond.operator === 'equals') return text === String(cond.value).toLowerCase();
+        if (cond.operator === 'in') return cond.value.map((v) => String(v).toLowerCase()).includes(text);
+        if (cond.operator === 'is_not_empty') return String(value).trim() !== '';
+        if (cond.operator === 'starts_with') return String(value).startsWith(cond.value);
+        return true;
+      }
+      function execute(rule) {
+        if (rule.result_type === 'distribution') {
+          const distribution = {};
+          state.rows.forEach((row) => { const value = row[rule.logic.group_by] || '<empty>'; distribution[value] = (distribution[value] || 0) + 1; });
+          return { rule, distribution, insight: `Distribution générée pour ${rule.logic.group_by}.` };
+        }
+        const scoped = state.rows.filter((row) => (rule.logic.scope || []).every((cond) => match(row, cond)));
+        if (rule.result_type === 'duplicates') {
+          const field = rule.logic.assertions[0].field; const counts = {};
+          scoped.forEach((row) => { if (row[field]) counts[row[field]] = (counts[row[field]] || 0) + 1; });
+          const records = scoped.filter((row) => counts[row[field]] > 1);
+          return { rule, count: records.length, records, insight: `${records.length} enregistrements en doublon détectés.` };
+        }
+        const compliant = scoped.filter((row) => (rule.logic.assertions || []).every((cond) => match(row, cond)));
+        const records = scoped.filter((row) => !(rule.logic.assertions || []).every((cond) => match(row, cond)));
+        const rate = scoped.length ? Math.round((compliant.length / scoped.length) * 1000) / 10 : 100;
+        return { rule, total: scoped.length, compliant: compliant.length, nonCompliant: records.length, rate, records, insight: `${records.length} non-conformité(s), taux de conformité ${rate}%.` };
+      }
+      function renderResults() {
+        state.results = state.rules.map(execute); $('resultsPanel').classList.remove('hidden'); $('executedRules').textContent = state.results.length;
+        const rates = state.results.map((r) => r.rate).filter((rate) => rate !== undefined); $('overallScore').textContent = rates.length ? `${Math.round(rates.reduce((a, b) => a + b, 0) / rates.length)}%` : '—';
+        $('results').innerHTML = state.results.map((result) => `<details class="result" open><summary><strong>${result.rule.id} — ${result.rule.name}</strong></summary><p>${result.insight}</p>${result.distribution ? `<pre>${JSON.stringify(result.distribution, null, 2)}</pre>` : ''}${result.records ? `<p>${result.records.length} ligne(s) affichée(s)</p><table><thead><tr>${state.columns.slice(0, 6).map((c) => `<th>${c}</th>`).join('')}</tr></thead><tbody>${result.records.slice(0, 20).map((row) => `<tr>${state.columns.slice(0, 6).map((c) => `<td>${row[c] ?? ''}</td>`).join('')}</tr>`).join('')}</tbody></table>` : ''}</details>`).join('');
+      }
+      $('datasetFile').addEventListener('change', async (event) => {
+        const file = event.target.files[0]; if (!file) return;
+        const parsed = parseCsv(await file.text()); state.columns = parsed.columns; state.rows = parsed.rows;
+        state.mapping = Object.fromEntries(state.columns.map((column) => [column, inferConcept(column)])); state.rules = []; state.results = [];
+        $('resultsPanel').classList.add('hidden'); $('interpretButton').disabled = false; renderDataset(file.name); suggestRules(); renderRules();
+      });
+      $('interpretButton').addEventListener('click', () => {
+        const text = $('customRule').value.toLowerCase(); const m = byConcept(); let rule;
+        if (text.includes('duplicate') || text.includes('doubl') || text.includes('duplic')) rule = { id: `R${String(state.rules.length + state.queue.length + 1).padStart(3, '0')}`, name: 'Duplicate email detection', status: 'draft', result_type: 'duplicates', logic: { scope: [], assertions: [{ field: m.EMAIL || m.EMPLOYEE_ID || state.columns[0], operator: 'is_duplicate' }] } };
+        else if (text.includes('svc_') || text.includes('service')) rule = { id: `R${String(state.rules.length + state.queue.length + 1).padStart(3, '0')}`, name: 'Service account classification', status: 'draft', result_type: 'compliance_rate', logic: { scope: [{ field: m.USERNAME || 'username', operator: 'starts_with', value: 'svc_' }], assertions: [{ field: m.ACCOUNT_TYPE || 'accountType', operator: 'equals', value: 'Service' }] } };
+        else rule = { id: `R${String(state.rules.length + state.queue.length + 1).padStart(3, '0')}`, name: 'Required IAM attribute', status: 'draft', result_type: 'compliance_rate', logic: { scope: [], assertions: [{ field: m.MANAGER || m.EMPLOYEE_ID || state.columns[0], operator: 'is_not_empty' }] } };
+        state.queue.unshift(rule); renderProposal(); $('customRule').value = '';
+      });
+      $('runButton').addEventListener('click', renderResults);
+    </script>
+  </body>
+</html>
